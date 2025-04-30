@@ -23,7 +23,8 @@ librarian = Agent(
         4. Use numbered citations matching metadata (filename, page).
     """,
     tools=[text_search, semantic_search, read_document, ingest_document, health_check],
-    output_type=AgentOutput
+    output_type=AgentOutput,
+    model="gpt-4.1-2025-04-14"
 )
 
 
