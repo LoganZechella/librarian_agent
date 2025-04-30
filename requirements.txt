@@ -1,0 +1,6 @@
+pymongo
+openai
+tiktoken
+PyPDF2
+python-docx
+boto3
