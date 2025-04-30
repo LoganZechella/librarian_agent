@@ -4,9 +4,12 @@ Function tools for Librarian Agent: text search, semantic search, document readi
 
 import os
 from typing import List, Dict, Optional
+from openai import OpenAI
 
 # Placeholder for function_tool decorator import
 # from agents import function_tool
+
+client = OpenAI()
 
 def text_search(query: str, max_results: int = 5) -> List[Dict]:
     """Use MongoDB Atlas text search to find keyword matches."""
@@ -23,12 +26,12 @@ def text_search(query: str, max_results: int = 5) -> List[Dict]:
 def semantic_search(query: str, k: int = 5) -> List[Dict]:
     """Embed query & use Atlas vectorSearch to find top-k chunks."""
     from pymongo import MongoClient
-    import openai
-    embedding = openai.Embedding.create(
+    response = client.embeddings.create(
         model="text-embedding-3-small", input=query
-    )["data"][0]["embedding"]
-    client = MongoClient(os.getenv("MONGODB_ATLAS_URI"))
-    db = client[os.getenv("MONGODB_DB", "librarian_kb")]
+    )
+    embedding = response.data[0].embedding
+    client_db = MongoClient(os.getenv("MONGODB_ATLAS_URI"))
+    db = client_db[os.getenv("MONGODB_DB", "librarian_kb")]
     pipeline = [
         {
             "$searchBeta": {
@@ -85,7 +88,6 @@ def read_document(path: str, start_page: int = 1, end_page: Optional[int] = None
 def ingest_document(path: str) -> str:
     """Extract, chunk, embed, and upsert into MongoDB Atlas."""
     import tiktoken
-    import openai
     from pymongo import MongoClient
     import uuid
     # 1. Extract text
@@ -101,13 +103,14 @@ def ingest_document(path: str) -> str:
         chunk_text = enc.decode(chunk_tokens)
         chunks.append(chunk_text)
     # 3. Embed and upsert
-    client = MongoClient(os.getenv("MONGODB_ATLAS_URI"))
-    db = client[os.getenv("MONGODB_DB", "librarian_kb")]
+    client_db = MongoClient(os.getenv("MONGODB_ATLAS_URI"))
+    db = client_db[os.getenv("MONGODB_DB", "librarian_kb")]
     meta = {"source": path}
     for idx, chunk_text in enumerate(chunks):
-        embedding = openai.Embedding.create(
+        response = client.embeddings.create(
             model="text-embedding-3-small", input=chunk_text
-        )["data"][0]["embedding"]
+        )
+        embedding = response.data[0].embedding
         chunk_id = str(uuid.uuid4())
         db.chunks.update_one(
             {"_id": chunk_id},
