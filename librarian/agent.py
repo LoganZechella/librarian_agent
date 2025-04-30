@@ -4,6 +4,7 @@ Librarian Agent construction using OpenAI Agents SDK.
 
 from agents import Agent, Runner, function_tool
 from .tools import text_search, semantic_search, read_document, ingest_document, health_check
+from .schema import AgentOutput
 
 # Decorate tools (if not already decorated in tools.py)
 text_search = function_tool(text_search)
@@ -22,8 +23,9 @@ librarian = Agent(
         4. Use numbered citations matching metadata (filename, page).
     """,
     tools=[text_search, semantic_search, read_document, ingest_document, health_check],
-    output_type=dict
+    output_type=AgentOutput
 )
+
 
 # Example runner invocation
 # result = Runner.run_sync(librarian, user_query)

@@ -6,12 +6,15 @@ import os
 from typing import List, Dict, Optional
 from openai import OpenAI
 import logging
+import dotenv
+
+dotenv.load_dotenv()
+
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("librarian.tools")
 
-# Placeholder for function_tool decorator import
-# from agents import function_tool
+
 
 client = OpenAI()
 
@@ -46,8 +49,10 @@ def health_check() -> dict:
         status["details"]["s3"] = str(e)
     return status
 
-def text_search(query: str, max_results: int = 5) -> List[Dict]:
+def text_search(query: str, max_results: Optional[int]) -> List[Dict]:
     """Use MongoDB Atlas text search to find keyword matches."""
+    if max_results is None:
+        max_results = 5
     logger.info(f"text_search called with query='{query}' max_results={max_results}")
     try:
         from pymongo import MongoClient
@@ -65,8 +70,10 @@ def text_search(query: str, max_results: int = 5) -> List[Dict]:
         logger.error(f"text_search error: {e}")
         return [{"error": str(e)}]
 
-def semantic_search(query: str, k: int = 5) -> List[Dict]:
+def semantic_search(query: str, k: Optional[int]) -> List[Dict]:
     """Embed query & use Atlas vectorSearch to find top-k chunks."""
+    if k is None:
+        k = 5
     logger.info(f"semantic_search called with query='{query}' k={k}")
     try:
         from pymongo import MongoClient
@@ -78,15 +85,14 @@ def semantic_search(query: str, k: int = 5) -> List[Dict]:
         db = client_db[os.getenv("MONGODB_DB", "librarian_kb")]
         pipeline = [
             {
-                "$searchBeta": {
-                    "vector": {
-                        "embedding": embedding,
-                        "path": "embedding",
-                        "k": k
-                    }
+                "$vectorSearch": {
+                    "index": "vector_index",
+                    "queryVector": embedding,
+                    "path": "embedding",
+                    "numCandidates": 100,
+                    "limit": k
                 }
             },
-            {"$limit": k},
             {"$project": {"_id": 1, "text": 1, "metadata": 1}}
         ]
         results = list(db.chunks.aggregate(pipeline))
@@ -96,8 +102,10 @@ def semantic_search(query: str, k: int = 5) -> List[Dict]:
         logger.error(f"semantic_search error: {e}")
         return [{"error": str(e)}]
 
-def read_document(path: str, start_page: int = 1, end_page: Optional[int] = None) -> str:
+def read_document(path: str, start_page: Optional[int], end_page: Optional[int]) -> str:
     """Load raw text from a stored document on disk or S3. Supports PDF, Word, Markdown, and S3."""
+    if start_page is None:
+        start_page = 1
     logger.info(f"read_document called with path='{path}' start_page={start_page} end_page={end_page}")
     import mimetypes
     import io
@@ -107,7 +115,13 @@ def read_document(path: str, start_page: int = 1, end_page: Optional[int] = None
         if path.startswith("s3://"):
             import boto3
             s3 = boto3.client("s3")
-            bucket, key = path[5:].split("/", 1)
+            # Parse bucket and key from path
+            bucket_key = path[5:]
+            if '/' not in bucket_key:
+                raise ValueError(f"S3 path must be in the format s3://bucket/key, got: {path}")
+            bucket, key = bucket_key.split("/", 1)
+            if not key:
+                raise ValueError(f"S3 key could not be parsed from path: {path}")
             obj = s3.get_object(Bucket=bucket, Key=key)
             file_stream = io.BytesIO(obj["Body"].read())
             mime, _ = mimetypes.guess_type(key)
@@ -138,7 +152,7 @@ def read_document(path: str, start_page: int = 1, end_page: Optional[int] = None
         return text
     except Exception as e:
         logger.error(f"read_document error: {e}")
-        return f"Error: {e}"
+        raise
 
 def ingest_document(path: str) -> str:
     """Extract, chunk, embed, and upsert into MongoDB Atlas."""
@@ -148,7 +162,7 @@ def ingest_document(path: str) -> str:
     import uuid
     try:
         # 1. Extract text
-        text = read_document(path)
+        text = read_document(path, 1, None)
         # 2. Chunking (500 tokens, 20% overlap)
         enc = tiktoken.get_encoding("cl100k_base")
         tokens = enc.encode(text)

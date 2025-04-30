@@ -1,35 +1,37 @@
 import os
 import pytest
-
-# Ensure the new OpenAI Python SDK is installed and API key is set
-if "OPENAI_API_KEY" not in os.environ:
-    raise EnvironmentError("OPENAI_API_KEY must be set in the environment for these tests to run.")
-
 from librarian.agent import librarian, Runner
+import dotenv   
+
+dotenv.load_dotenv()
+
+MONGODB_ATLAS_URI = os.getenv("MONGODB_ATLAS_URI")
+S3_BUCKET = os.getenv("S3_BUCKET")
 
 def test_agent_keyword_query_real():
     user_query = "Find the PDF of Project X spec."
     result = Runner.run_sync(librarian, user_query)
-    assert isinstance(result.final_output, dict)
-    assert "summary" in result.final_output
-    assert "results" in result.final_output
-    assert "next_steps" in result.final_output
+    # Output is a Pydantic model (AgentOutput)
+    output = result.final_output
+    assert hasattr(output, 'summary')
+    assert hasattr(output, 'results')
+    assert hasattr(output, 'next_steps')
 
 def test_agent_semantic_query_real():
     user_query = "Show me all design decisions about caching."
     result = Runner.run_sync(librarian, user_query)
-    assert isinstance(result.final_output, dict)
-    assert "summary" in result.final_output
-    assert "results" in result.final_output
-    assert "next_steps" in result.final_output
+    output = result.final_output
+    assert hasattr(output, 'summary')
+    assert hasattr(output, 'results')
+    assert hasattr(output, 'next_steps')
 
 def test_agent_handles_no_results_real():
     user_query = "ThisIsAGibberishQueryThatShouldReturnNothing"
     result = Runner.run_sync(librarian, user_query)
-    assert isinstance(result.final_output, dict)
-    assert "summary" in result.final_output
-    assert "results" in result.final_output
-    assert isinstance(result.final_output["results"], list)
+    output = result.final_output
+    assert hasattr(output, 'summary')
+    assert hasattr(output, 'results')
+    assert isinstance(output.results, list)
 
 def test_agent_document_ingestion_real():
     path = os.path.join(os.path.dirname(__file__), "sample_docs", "sample.md")
@@ -41,11 +43,10 @@ def test_agent_response_format_real():
     user_query = "List all whitepapers on Topic Y."
     result = Runner.run_sync(librarian, user_query)
     output = result.final_output
-    assert isinstance(output, dict)
-    assert "summary" in output
-    assert "results" in output
-    assert "next_steps" in output
-    if output["results"]:
-        for r in output["results"]:
-            assert "excerpt" in r
-            assert "source" in r
+    assert hasattr(output, 'summary')
+    assert hasattr(output, 'results')
+    assert hasattr(output, 'next_steps')
+    if output.results:
+        for r in output.results:
+            assert hasattr(r, 'excerpt')
+            assert hasattr(r, 'source')
