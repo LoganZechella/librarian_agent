@@ -5,10 +5,11 @@ import pytest
 if "OPENAI_API_KEY" not in os.environ:
     raise EnvironmentError("OPENAI_API_KEY must be set in the environment for these tests to run.")
 
-from librarian.tools import text_search, semantic_search, read_document, ingest_document
+from librarian.tools import text_search, semantic_search, read_document, ingest_document, health_check
 
 os.environ["MONGODB_DB"] = "librarian_kb"
 S3_BUCKET = "librarian-agent-bucket"
+
 
 def test_text_search_real_mongodb():
     results = text_search("design", max_results=3)
@@ -54,3 +55,12 @@ def test_read_document_unsupported_type_raises():
     with pytest.raises(ValueError):
         read_document(path)
     os.remove(path)
+
+def test_health_check():
+    result = health_check()
+    assert isinstance(result, dict)
+    assert "mongodb" in result
+    assert "openai" in result
+    assert "s3" in result
+    # At least one should be True (if all are False, something is wrong with the environment)
+    assert any([result["mongodb"], result["openai"], result["s3"]])

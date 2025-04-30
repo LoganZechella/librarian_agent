@@ -3,13 +3,14 @@ Librarian Agent construction using OpenAI Agents SDK.
 """
 
 from agents import Agent, Runner, function_tool
-from .tools import text_search, semantic_search, read_document, ingest_document
+from .tools import text_search, semantic_search, read_document, ingest_document, health_check
 
 # Decorate tools (if not already decorated in tools.py)
 text_search = function_tool(text_search)
 semantic_search = function_tool(semantic_search)
 read_document = function_tool(read_document)
 ingest_document = function_tool(ingest_document)
+health_check = function_tool(health_check)
 
 librarian = Agent(
     name="Librarian",
@@ -20,7 +21,7 @@ librarian = Agent(
         3. Aggregate under headings: Summary, Results, Next Steps.
         4. Use numbered citations matching metadata (filename, page).
     """,
-    tools=[text_search, semantic_search, read_document, ingest_document],
+    tools=[text_search, semantic_search, read_document, ingest_document, health_check],
     output_type=dict
 )
 
