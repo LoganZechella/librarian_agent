@@ -10,3 +10,4 @@ librarian_agent/__pycache__
 librarian_agent/.env
 librarian_agent/.venv
 librarian_agent/.gitignore
+knowledge/

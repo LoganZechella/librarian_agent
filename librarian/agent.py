@@ -15,6 +15,7 @@ health_check = function_tool(health_check)
 
 librarian = Agent(
     name="Librarian",
+    handoffs=[],
     instructions="""
         You are the Librarian. Given a query:
         1. Decide between keywords or semantic retrieval.
