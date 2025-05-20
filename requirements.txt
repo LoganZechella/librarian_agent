@@ -5,3 +5,5 @@ tiktoken
 PyPDF2
 python-docx
 boto3
+pydantic-settings
+tenacity

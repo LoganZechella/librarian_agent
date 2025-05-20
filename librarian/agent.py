@@ -2,18 +2,15 @@
 Librarian Agent construction using OpenAI Agents SDK.
 """
 
-from agents import Agent, Runner, function_tool
-from .tools import text_search, semantic_search, read_document, ingest_document, health_check
+from agents import Agent, Runner
+from .utils import health_check
+from .search import text_search, semantic_search
+from .io import read_document
+from .ingest import ingest_document
 from .schema import AgentOutput
+from .config import settings
 
-# Decorate tools (if not already decorated in tools.py)
-text_search = function_tool(text_search)
-semantic_search = function_tool(semantic_search)
-read_document = function_tool(read_document)
-ingest_document = function_tool(ingest_document)
-health_check = function_tool(health_check)
-
-librarian = Agent(
+librarian: Agent = Agent(
     name="Librarian",
     handoffs=[],
     instructions="""
@@ -25,7 +22,7 @@ librarian = Agent(
     """,
     tools=[text_search, semantic_search, read_document, ingest_document, health_check],
     output_type=AgentOutput,
-    model="gpt-4.1-2025-04-14"
+    model=settings.AGENT_MODEL
 )
 
 
